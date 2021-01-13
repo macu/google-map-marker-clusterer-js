@@ -1,6 +1,6 @@
 {
   "name": "@macu/google-map-marker-clusterer-js",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Display and cluster markers on a map",
   "main": "build/index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/macu/google-map-marker-clusterer.git"
+    "url": "git+https://github.com/macu/google-map-marker-clusterer-js.git"
   },
   "keywords": [
     "google",
@@ -19,7 +19,7 @@
   "author": "Matt Cudmore <cudmore.mb@gmail.com>",
   "license": "The Unlicense",
   "bugs": {
-    "url": "https://github.com/macu/google-map-marker-clusterer/issues"
+    "url": "https://github.com/macu/google-map-marker-clusterer-js/issues"
   },
   "homepage": "https://macu.github.io/google-map-marker-clusterer-js/",
   "files": [
