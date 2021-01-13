@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Google Map Marker Clusterer demo</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<script defer
+	src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.slim.min.js"
+	integrity="sha512-/DXTXr6nQodMUiq+IUJYCt2PPOUjrHJ9wFrqpJ3XkgPNOZVfMok7cRw6CSxyCQxXn6ozlESsSh1/sMCTF1rL/g=="
+	crossorigin="anonymous"></script>
+
+<script defer
+	src="build/index.js"></script>
+
+<script defer
+	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCFIbXP75rD331l_6--N3JApdH-yaxlhqw&callback=initMap"></script>
+
+<style>
+body {
+	padding: 1vh;
+}
+#app {
+	display: flex;
+	flex-direction: column;
+	height: 90vh;
+}
+#map {
+	flex: 1;
+	min-height: 200px;
+	margin-bottom: 20px;
+}
+#markerCount {
+	margin-bottom: 10px;
+}
+</style>
+
+</head>
+<body>
+
+	<div id="app">
+		<div id="map"></div>
+		<div id="markerCount"></div>
+		<div id="controls">
+			<button id="populateButton" disabled>Add random demo data</button>
+			<button id="addMarkerButton" disabled>Add marker at address</button>
+			<button id="clearButton" disabled>Clear data</button>
+		</div>
+	</div>
+
+<script>
+var app;
+var nextMarkerIndex = 0;
+
+function initMap() {
+	console.log('initMap', arguments);
+
+	var demoData = [];
+
+	// Random locations across HRM (initial display)
+	var minLat = 44.6148756441958;
+	var minLng = -63.72629600600812;
+	var maxLat = 44.74121085567042;
+	var maxLng = -63.407799778743716;
+	for (var i = 0; i < 100; i++) {
+		demoData.push({
+			id: 'r' + nextMarkerIndex++,
+			label: 'Random ' + nextMarkerIndex,
+			latlng: [
+				minLat + ((maxLat - minLat) * Math.random()),
+				minLng + ((maxLng - minLng) * Math.random())
+			],
+		});
+	}
+
+	app = new MarkerClusterer.default(document.getElementById('map'), demoData, {
+		onMarkerClick: function(data) {
+			// Return content for popup
+			return $('<span/>').text(data.label).get(0);
+		},
+		enableDebug: true,
+	});
+
+	$('#markerCount').text('100 random points currently displayed');
+
+	// Enable buttons
+	$('#populateButton').on('click', addDemoData).removeAttr('disabled');
+	$('#addMarkerButton').on('click', promptAddMarker).removeAttr('disabled');
+	$('#clearButton').on('click', clearData).removeAttr('disabled');
+}
+
+function addDemoData() {
+	var demoData = [];
+
+	var bounds = app.map.getBounds(),
+		sw = bounds.getSouthWest(),
+		ne = bounds.getNorthEast();
+
+	var minLat = sw.lat(),
+		minLng = sw.lng(),
+		maxLat = ne.lat(),
+		maxLng = ne.lng();
+
+	for (var i = 0; i < 100; i++) {
+		demoData.push({
+			id: 'r' + nextMarkerIndex++,
+			label: 'Random ' + nextMarkerIndex,
+			latlng: new google.maps.LatLng(
+				minLat + ((maxLat - minLat) * Math.random()),
+				minLng + ((maxLng - minLng) * Math.random())
+			),
+		});
+	}
+
+	app.addData(demoData);
+
+	updateMarkerCount();
+}
+
+function promptAddMarker() {
+	var address = window.prompt('Enter full address:');
+
+	if (address && address.trim()) {
+		MarkerClusterer.geocodeAddress(address, function(latlng) {
+			if (latlng) {
+				app.addData({
+					id: 'c' + nextMarkerIndex++,
+					label: address.trim(),
+					latlng: latlng,
+				});
+				app.setCenter(latlng);
+				updateMarkerCount();
+			} else {
+				window.alert('Geocoding failed');
+			}
+		});
+	}
+}
+
+function clearData() {
+	app.clearData();
+
+	nextMarkerIndex = 0;
+
+	updateMarkerCount();
+}
+
+function updateMarkerCount() {
+	if (app.data.length) {
+		if (app.data.length === 1) {
+			$('#markerCount').text('One marker currently on map');
+		} else {
+			$('#markerCount').text(app.data.length + ' markers currently on map');
+		}
+	} else {
+		$('#markerCount').text('No markers currently on map');
+	}
+}
+</script>
+
+</body>
+</html>
