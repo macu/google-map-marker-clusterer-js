@@ -66,17 +66,6 @@ export default class MarkerClusterer {
 
 			this.setData(data);
 
-			// This is a so called optimization.
-			// Zoom events are followed by the idle event;
-			// skip re-rendering markers on the next idle following zoom,
-			// as zoom calls calculateClusters which itself calls renderMarkers.
-			// There may be a bug around this; it relies on zoom calling getMaxZoomAtLatLng
-			// which is expected to invoke the callback after the next idle;
-			// however, if getMaxZoomAtLatLng executes the callback immediately
-			// and there is one additional event (such as pan) following zoom,
-			// then markers might not get rendered in the new view bounds.
-			var renderOnIdle = true;
-
 			this.map.addListener('zoom_changed', (function() {
 				this.debug('zoom_changed', this.map.getZoom());
 
@@ -89,24 +78,23 @@ export default class MarkerClusterer {
 				}
 				this.zoomInFromZoom = null;
 
-				// Rendering will be called when calculating clusters is finished.
-				renderOnIdle = false;
+				// Markers will be rendered in idle event following zoom.
+				// awaitingIdle suspends rendering markers following calls to calculateClusters.
+				this.awaitingIdle = true;
 
 				// Clusters need to be recalculated at each zoom
 				this.calculateClusters();
 
 			}).bind(this));
 
-			// Idle follows pan, zoom, and other changes to the underlying map.
+			// Idle follows pan, zoom, and other events marking changes to the underlying map.
 			this.map.addListener('idle', (function() {
 				this.debug('idle');
 
-				if (renderOnIdle) {
-					this.renderMarkers();
-				}
+				// Resume rendering markers after calls to calculateClusters
+				this.awaitingIdle = false;
 
-				// Always render on the next idle in case of bounds changes without zoom.
-				renderOnIdle = true;
+				this.renderMarkers();
 
 			}).bind(this));
 
@@ -251,8 +239,11 @@ export default class MarkerClusterer {
 			}
 			this.clustersById = newClustersById;
 
-			// Always render markers immediately after recalculating clusters.
-			this.renderMarkers();
+			if (this.awaitingIdle) {
+				// Don't render markers while awaiting an idle event following a zoom event
+			} else {
+				this.renderMarkers();
+			}
 
 		}).bind(this));
 	}

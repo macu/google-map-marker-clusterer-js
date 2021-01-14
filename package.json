@@ -1,6 +1,6 @@
 {
   "name": "@macu/google-map-marker-clusterer-js",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Display and cluster markers on a map",
   "main": "build/index.js",
   "scripts": {
