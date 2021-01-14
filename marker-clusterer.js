@@ -17,17 +17,17 @@ export default class MarkerClusterer {
 
 			// called when a marker is clicked;
 			// passed the original data element associated with the marker;
-			// may return text content or a DOM node to display
+			// may return text content or a DOM node to display in popover
 			onMarkerClick: config.onMarkerClick || null,
 
-			// array of {min: <int>, icon: <string|google.maps.Icon|google.maps.Symbol>}
+			// array of {min: <int>, icon: <url | google.maps.Icon | google.maps.Symbol>}
 			// (optionally also specifying color, fontSize, and fontWeight, like google.maps.MarkerLabel)
-			// values specifying cluster icons to render according to cluster size,
+			// specifying cluster icons to render according to cluster size,
 			// where min is the minimum cluster size at which the icon applies;
 			// ordered from least to greatest minimum cluster size.
 			// alternately, a function may be provided, accepting a cluster size,
 			// and returning the config for the associated cluster icon and label.
-			// if no array is given, default cluster icons will be rendered.
+			// if config.clusterIcons is not passed in, default cluster icons will be rendered.
 			clusterIcons: config.clusterIcons || (clusterSize => {
 				let scale = Math.round(clusterSize / 10);
 				switch (scale) {
@@ -39,7 +39,7 @@ export default class MarkerClusterer {
 				}
 			}),
 
-			// enable debug output
+			// enable debug output covering the initiation and rendering cycle
 			enableDebug: config.enableDebug || false,
 
 		};
@@ -66,9 +66,15 @@ export default class MarkerClusterer {
 
 			this.setData(data);
 
-			// Zoom event occurrs followed by idle event;
-			// skip re-rendering markers on idle following zoom,
+			// This is a so called optimization.
+			// Zoom events are followed by the idle event;
+			// skip re-rendering markers on the next idle following zoom,
 			// as zoom calls calculateClusters which itself calls renderMarkers.
+			// There may be a bug around this; it relies on zoom calling getMaxZoomAtLatLng
+			// which is expected to invoke the callback after the next idle;
+			// however, if getMaxZoomAtLatLng executes the callback immediately
+			// and there is one additional event (such as pan) following zoom,
+			// then markers might not get rendered in the new view bounds.
 			var renderOnIdle = true;
 
 			this.map.addListener('zoom_changed', (function() {
@@ -78,6 +84,7 @@ export default class MarkerClusterer {
 					// Zoom didn't occur when cluster was clicked; try to force a zoom
 					this.map.setZoom(this.zoomInFromZoom + 1);
 					this.zoomInFromZoom = null;
+					// Wait for next invocation of zoom_changed
 					return;
 				}
 				this.zoomInFromZoom = null;
@@ -85,10 +92,12 @@ export default class MarkerClusterer {
 				// Rendering will be called when calculating clusters is finished.
 				renderOnIdle = false;
 
+				// Clusters need to be recalculated at each zoom
 				this.calculateClusters();
 
 			}).bind(this));
 
+			// Idle follows pan, zoom, and other changes to the underlying map.
 			this.map.addListener('idle', (function() {
 				this.debug('idle');
 
@@ -120,6 +129,8 @@ export default class MarkerClusterer {
 	}
 
 	setData(data) {
+		this.debug('setData');
+
 		this.data = data || [];
 
 		if (this.data.length) {
@@ -128,7 +139,7 @@ export default class MarkerClusterer {
 				// Zoom out to neighbourhood
 				this.map.setZoom(16);
 			}
-		} else {
+		} else if (!this.map.getBounds()) {
 			// Focus on North America when there is no data
 			this.zoomToBounds(new google.maps.LatLngBounds(
 				{lat: 41.40329390690307, lng: -132.41174280543527},
@@ -139,8 +150,10 @@ export default class MarkerClusterer {
 		this.calculateClusters();
 	}
 
-	// TODO This would not be safe if adding data already present on the map
+	// TODO Replace existing data on duplicate ID
 	addData(data) {
+		this.debug('addData');
+
 		if (Array.isArray(data)) {
 			this.data = this.data.concat(data);
 		} else {
@@ -150,6 +163,8 @@ export default class MarkerClusterer {
 	}
 
 	clearData() {
+		this.debug('clearData');
+
 		this.data = [];
 
 		this.calculateClusters();
@@ -161,11 +176,8 @@ export default class MarkerClusterer {
 		// Determine whether zoom is at max for current map center
 		this.maxZoomService.getMaxZoomAtLatLng(this.map.getCenter(), (function(result) {
 
-			var allowClustering;
-			if (result.status !== "OK") {
-				// error
-				allowClustering = false;
-			} else {
+			var allowClustering = false;
+			if (result.status === 'OK') {
 				// only show clusters if greater zoom is available
 				allowClustering = result.zoom > this.map.getZoom();
 			}
@@ -344,7 +356,10 @@ export default class MarkerClusterer {
 		}
 
 		if (this.config.onMarkerClick) {
+			// Call click handler and render info window
+
 			var infoWindowContent = this.config.onMarkerClick(e);
+
 			if (infoWindowContent) {
 				this.visibleInfoWindow = new google.maps.InfoWindow({
 					content: infoWindowContent,
@@ -382,16 +397,16 @@ export default class MarkerClusterer {
 		return d < this.config.clusterRadius; // max pixel cluster radius
 	}
 
+	setCenter(latlng) {
+		this.map.setCenter(makeLatlng(latlng));
+	}
+
 	calcBounds(data) {
 		var bounds = new google.maps.LatLngBounds();
 		for (var i = 0; i < data.length; i++) {
 			bounds.extend(makeLatlng(data[i].latlng));
 		}
 		return bounds;
-	}
-
-	setCenter(latlng) {
-		this.map.setCenter(makeLatlng(latlng));
 	}
 
 	zoomToBounds(bounds) {

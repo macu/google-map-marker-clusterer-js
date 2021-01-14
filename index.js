@@ -22,12 +22,12 @@ export function geocodeAddress(address, callback) {
 			}
 			address = compiledAddressParts.join(', ');
 		} else {
-			let p = 0;
 			let street = (address.street || '').trim();
 			let city = (address.city || '').trim();
 			let province = (address.province || address.state || '').trim();
 			let country = (address.country || '').trim();
 			let postcode = (address.postcode || address.zipcode || '').trim();
+			let p = 0; // parts counter
 			address = (street ? (p++, street) : '') +
 				(city ? ((p ? ', ' : '') + (p++, city)) : '') +
 				(province ? ((p ? ', ' : '') + (p++, province)) : '') +

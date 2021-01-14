@@ -80,6 +80,60 @@ $('#addMarker').on('click', function() {
 </script>
 ```
 
+## Constructor
+
+```js
+var app = new MarkerClusterer.default(map, data, config);
+```
+
+| Prop | Description |
+| --- | --- |
+| `map` | Document element or instance of `google.maps.Map`. The map instance is accessible via `markerClusterer.map`. |
+| `data` | Array of `{id: <int \| string>, latlng: <[<lat>, <lng>] \| {lat: <lat>, lng: <lng>} \| google.maps.LatLng>}` objects. These objects will be passed to the handler you specify in the config when their respective markers are clicked. |
+| `config` | Optional configuration. See below for options and defaults. |
+
+### Config object
+
+| Prop | Description |
+| --- | --- |
+| `clusterRadius` | Pixel radius of cluster bounds on map (default 150). A single cluster may encompass points within this radius on the rendered map. |
+| `onMarkerClick` | Handler called when a marker is clicked; passed the original data element associated with the marker; may return text content or a DOM node to display in a popover. |
+| `clusterIcons` | Array of `{min: <int>, icon: <url \| google.maps.Icon \| google.maps.Symbol>}` (optionally also specifying `color`, `fontSize`, and `fontWeight`, like `google.maps.MarkerLabel`) specifying cluster icons to render according to cluster size, where min is the minimum cluster size at which the icon applies; ordered from least to greatest minimum cluster size. Alternately, a function may be provided, accepting a cluster size, and returning the config for the associated cluster icon and label. If `config.clusterIcons` is not passed in, default cluster icons will be rendered. |
+| `enableDebug` | Enable debug output covering the initialization and rendering cycle (default `false`). |
+
+## Static methods
+
+```js
+MarkerClusterer.createGoogleMap(mapEl, fullscreenControl = false)
+```
+
+Creates an instance of `google.maps.Map` using `mapEl` for the container. `fullscreenControl` says whether to show a fullscreen option on the map.
+
+```js
+MarkerClusterer.defaultIcon(color, strokeWeight, scale)
+```
+
+Returns a circular icon to use in cluster icon config. `color` should not have transparency, which is added by default. `strokeWeight` controls the circle's border line thickness. `scale` scales the size of the circle.
+
+```js
+MarkerClusterer.geocodeAddress(address, callback)
+```
+
+Initiates a lookup request to the Google Maps Geocoding API using the given address. `callback` is a function that will receive `null` when the address is empty, `false` when lookup fails, or an instance of `google.maps.LatLng`. `address` may also be an array of address parts to be joined with commas, or an object containing any subset of `street`, `city`, `province` or `state`, `country`, `postcode` or `zipcode`, sent to Google in that order.
+
+## Instance methods
+
+| Method | Description |
+| --- | --- |
+| `app.setData(data)` | Replaces the mapped locations. |
+| `app.addData(data)` | Adds locations to the map. Do not duplicate IDs already on the map. |
+| `app.clearData()` | Removes all locations from the map. |
+| `app.closeInfoWindow()` | Closes the marker popover if one is open. |
+| `app.setCenter(latlng)` | Centers the map on the given location. |
+| `app.calcBounds(data)` | Returns a bounding box that contains all the given data. |
+| `app.zoomToBounds(bounds)` | Pans and zooms to the given bounds. |
+| `app.zoomToPosition(latlng, callback)` | Pans and zooms to the given location. `callback` is called after markers at the new location are rendered. |
+
 ## Testing
 
 Build, start server, and access
